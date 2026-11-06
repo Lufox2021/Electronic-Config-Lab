@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Electron Configuration Lab</title>
+<style>
+  :root{
+    --ink:#1f2933; --muted:#5f6b7a; --line:#d6dde5; --bg:#f7f9fb; --card:#fff;
+    --accent:#1f6fb2; --ok:#1e7b3a; --okbg:#e8f5ec; --bad:#b42318; --badbg:#fdecea; --note:#8a5a00; --notebg:#fff6e0;
+    --s0:#eef6fc; --s1:#cfe6f6; --s2:#a9d2ee;
+    --p0:#fdf3ec; --p1:#f8dcc8; --p2:#f2bc9c;
+    --d0:#eef8ec; --d1:#d3edcd; --d2:#addca4;
+    --arrow:#d0021b; --boxline:#55697d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg);line-height:1.45}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+  header h1{font-size:1.25rem;margin:0;flex:1 1 auto}
+  .tabs{display:flex;gap:4px}
+  .tabs button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 14px;border-radius:7px;cursor:pointer}
+  .tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn.small{padding:4px 10px;font-size:.9rem}
+  main{max-width:980px;margin:0 auto;padding:18px 16px 60px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+  .chip{font:inherit;font-size:.9rem;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer}
+  .chip.active{background:#e3eefa;border-color:var(--accent);color:var(--accent)}
+  select,input[type=text],input[type=number]{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#fff}
+  .species{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:14px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  .species .sym{font-size:2.6rem;font-family:Georgia,"Times New Roman",serif;line-height:1}
+  .species .desc{color:var(--muted)}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:12px}
+  .step h2{font-size:1.02rem;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .step h2 .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:.85rem}
+  .step.done h2 .num{background:var(--ok)}
+  .step.locked{opacity:.5}
+  .step.locked .body{pointer-events:none}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .preview{font-family:Georgia,"Times New Roman",serif;font-size:1.3rem;min-height:1.8rem;margin:8px 0 2px}
+  .preview i{font-style:italic}
+  .hintline{color:var(--muted);font-size:.9rem}
+  .fb{margin-top:10px;border-radius:8px;padding:8px 12px;font-size:.95rem}
+  .fb:empty{display:none}
+  .fb.ok{background:var(--okbg);color:var(--ok)}
+  .fb.bad{background:var(--badbg);color:var(--bad)}
+  .fb ul{margin:4px 0 0 18px;padding:0}
+  .fb .note{color:var(--note)}
+  .fb.reveal{background:#eef3f9;color:var(--ink)}
+  /* orbital diagram */
+  .diagram{display:flex;flex-wrap:wrap;align-items:flex-start;gap:16px 18px;padding:10px 4px 4px;min-height:80px}
+  .subgroup{display:flex;flex-direction:column;align-items:center}
+  .boxes{display:flex}
+  .box{width:46px;height:46px;border:1.5px solid var(--boxline);margin-left:-1.5px;position:relative;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+  .box:first-child{margin-left:0}
+  .editable .box{cursor:pointer}
+  .editable .box:hover{outline:2px solid var(--accent);outline-offset:-3px}
+  .box svg{position:absolute;inset:0;width:100%;height:100%}
+  .box.s.f0{background:var(--s0)} .box.s.f1{background:var(--s1)} .box.s.f2{background:var(--s2)}
+  .box.p.f0{background:var(--p0)} .box.p.f1{background:var(--p1)} .box.p.f2{background:var(--p2)}
+  .box.d.f0{background:var(--d0)} .box.d.f1{background:var(--d1)} .box.d.f2{background:var(--d2)}
+  .sublabel{font-family:Georgia,"Times New Roman",serif;font-size:1.25rem;margin-top:3px}
+  .sublabel i{font-style:italic}
+  .core{align-self:center;font-family:Georgia,"Times New Roman",serif;font-size:1.4rem;padding:6px 10px;border:1.5px dashed var(--boxline);border-radius:8px;background:#f2f4f7}
+  .readonly .box{opacity:.55}
+  .palette{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+  .palette button{font-family:Georgia,serif;font-size:1.05rem;min-width:52px}
+  .palette button.on{background:#e3eefa;border-color:var(--accent)}
+  .small-diagram .box{width:28px;height:28px}
+  .small-diagram .sublabel{font-size:.9rem}
+  .small-diagram .core{font-size:.95rem;padding:2px 6px}
+  .small-diagram.diagram{gap:8px 10px;min-height:0;padding:2px}
+  label.radio{margin-right:16px;cursor:pointer}
+  /* periodic table */
+  #ptable{position:fixed;right:16px;top:64px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 8px 28px rgba(0,0,0,.15);z-index:20;display:none}
+  #ptable.show{display:block}
+  .pt{display:grid;grid-template-columns:repeat(18,34px);gap:2px}
+  .pt div{border:1px solid var(--line);border-radius:4px;text-align:center;padding:1px 0;font-size:.95rem;background:#fafcff}
+  .pt div small{display:block;font-size:.62rem;color:var(--muted);line-height:1}
+  .pt .blank{border:none;background:none}
+  /* test */
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:12px}
+  table.sum{border-collapse:collapse;width:100%;font-size:.92rem}
+  table.sum th,table.sum td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}
+  table.sum th{background:#f1f4f8}
+  .mark-ok{color:var(--ok);font-weight:600} .mark-bad{color:var(--bad);font-weight:600}
+  .cfg{font-family:Georgia,serif}
+  .nameline{font-size:1.05rem;margin:6px 0 14px}
+  .print-only{display:none}
+  @media print{
+    header,.bar,.no-print,#ptable{display:none !important}
+    body{background:#fff}
+    main{padding:0}
+    .print-only{display:block}
+    .card{border:none;padding:0}
+    tr{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Electron Configuration Lab</h1>
+  <div class="tabs">
+    <button id="tabCoach" class="active">Coaching</button>
+    <button id="tabTest">Testing</button>
+  </div>
+  <button class="btn" id="ptBtn">Periodic table</button>
+</header>
+<div id="ptable"><div class="row" style="justify-content:space-between;margin-bottom:6px"><b>Periods 1–4</b><button class="btn small" id="ptClose">Close</button></div><div class="pt" id="ptGrid"></div></div>
+<main id="app"></main>
+
+<script>
+// LOGIC-START
+const ELEMENTS = [null,
+ ['H','hydrogen'],['He','helium'],['Li','lithium'],['Be','beryllium'],['B','boron'],['C','carbon'],['N','nitrogen'],['O','oxygen'],['F','fluorine'],['Ne','neon'],
+ ['Na','sodium'],['Mg','magnesium'],['Al','aluminum'],['Si','silicon'],['P','phosphorus'],['S','sulfur'],['Cl','chlorine'],['Ar','argon'],
+ ['K','potassium'],['Ca','calcium'],['Sc','scandium'],['Ti','titanium'],['V','vanadium'],['Cr','chromium'],['Mn','manganese'],['Fe','iron'],['Co','cobalt'],['Ni','nickel'],['Cu','copper'],['Zn','zinc'],
+ ['Ga','gallium'],['Ge','germanium'],['As','arsenic'],['Se','selenium'],['Br','bromine'],['Kr','krypton']];
+const SUBS = ['1s','2s','2p','3s','3p','4s','3d','4p'];
+const EXT = ['1s','2s','2p','3s','3p','4s','3d','4p','5s','4d','5p','6s','4f','5d','6p','7s','5f','6d','7p'];
+const AR_CORE = ['1s','2s','2p','3s','3p'];
+const LQ = {s:0,p:1,d:2,f:3};
+const SUP = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+const CORES = {
+  He:{'1s':2},
+  Ne:{'1s':2,'2s':2,'2p':6},
+  Ar:{'1s':2,'2s':2,'2p':6,'3s':2,'3p':6},
+  Kr:{'1s':2,'2s':2,'2p':6,'3s':2,'3p':6,'4s':2,'3d':10,'4p':6}
+};
+function nBoxes(sub){ return 2*LQ[sub[1]]+1; }
+function cap(sub){ return 2*nBoxes(sub); }
+function total(c){ let t=0; for(const s in c) t+=c[s]; return t; }
+function aufbau(nE){ const c={}; let r=nE; for(const s of SUBS){ if(r<=0) break; const k=Math.min(cap(s),r); c[s]=k; r-=k; } return c; }
+function neutralConfig(Z){ const c=aufbau(Z); if(Z===24){c['4s']=1;c['3d']=5;} if(Z===29){c['4s']=1;c['3d']=10;} return c; }
+function ionConfig(Z,q){
+  if(q<0) return aufbau(Z-q);
+  const c=neutralConfig(Z);
+  for(let i=0;i<q;i++){
+    let best=null;
+    for(const s in c){ if(c[s]>0 && (!best || +s[0]>+best[0] || (+s[0]===+best[0] && LQ[s[1]]>LQ[best[1]]))) best=s; }
+    c[best]--; if(c[best]===0) delete c[best];
+  }
+  return c;
+}
+function sameConfig(a,b){ const ks=new Set([...Object.keys(a),...Object.keys(b)]); for(const k of ks) if((a[k]||0)!==(b[k]||0)) return false; return true; }
+function unpaired(c){ let u=0; for(const s in c){ const k=nBoxes(s), n=c[s]; u += n<=k ? n : 2*k-n; } return u; }
+
+function mk(sym,q,group){ const Z=ELEMENTS.findIndex(e=>e&&e[0]===sym); return {sym,Z,q,group,id:sym+(q?(Math.abs(q)>1?Math.abs(q):'')+(q>0?'+':'-'):'')}; }
+const SPECIES = [];
+for(let Z=1;Z<=36;Z++) SPECIES.push(mk(ELEMENTS[Z][0],0,'atom'));
+[['H',-1],['Li',1],['Be',2],['Na',1],['Mg',2],['Al',3],['K',1],['Ca',2],['Ga',3],['N',-3],['O',-2],['F',-1],['P',-3],['S',-2],['Cl',-1],['Se',-2],['Br',-1]]
+  .forEach(([s,q])=>SPECIES.push(mk(s,q,'main')));
+[['Sc',3],['Ti',2],['Ti',4],['V',2],['V',3],['Cr',2],['Cr',3],['Mn',2],['Fe',2],['Fe',3],['Co',2],['Co',3],['Ni',2],['Cu',1],['Cu',2],['Zn',2]]
+  .forEach(([s,q])=>SPECIES.push(mk(s,q,'tm')));
+
+function chargeText(q){ if(!q) return ''; return (Math.abs(q)>1?Math.abs(q):'')+(q>0?'+':'−'); }
+function speciesHTML(sp){ return sp.sym+(sp.q?'<sup>'+chargeText(sp.q)+'</sup>':''); }
+function speciesDesc(sp){
+  const nm=ELEMENTS[sp.Z][1];
+  if(!sp.q) return 'an atom of '+nm;
+  return (sp.q>0?'a cation':'an anion')+' of '+nm+', charge '+chargeText(sp.q);
+}
+function keyFor(sp){ return ionConfig(sp.Z,sp.q); }
+function usesCore(sp){ return sp.Z>18; }
+
+// ---- configuration parsing ----
+function parseConfig(raw){
+  let s=String(raw).replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g,ch=>SUP[ch]).replace(/\^/g,'');
+  const out={core:null,items:[],errors:[]};
+  const m=s.match(/^\s*\[\s*([A-Za-z]{1,2})\s*\]/);
+  if(m){
+    const k=m[1][0].toUpperCase()+m[1].slice(1).toLowerCase();
+    if(!CORES[k]) out.errors.push('['+m[1]+'] isn’t a noble-gas core here. Use [He], [Ne], [Ar] or [Kr].');
+    else out.core=k;
+    s=s.slice(m[0].length);
+  }
+  s=s.replace(/[\s,.;·]+/g,'');
+  if(s.includes('[')||s.includes(']')){ out.errors.push('A noble-gas core in brackets can only come at the start, like [Ar] 4s2.'); return out; }
+  let i=0;
+  while(i<s.length){
+    const c=s[i];
+    if(!/[1-9]/.test(c)){ out.errors.push('I can’t read “'+s.slice(i)+'”. Write each subshell like 1s2 or 2p6.'); break; }
+    const n=+c; i++;
+    const letter=(s[i]||'').toLowerCase();
+    if(!/[spdf]/.test(letter)||!letter){ out.errors.push('After “'+n+'” I expected s, p, d or f.'); break; }
+    i++;
+    let j=i; while(j<s.length && /\d/.test(s[j])) j++;
+    let digits=s.slice(i,j);
+    if(j<s.length && /[spdf]/i.test(s[j]) && digits.length>0){ digits=digits.slice(0,-1); j--; }
+    if(digits===''){ out.errors.push(n+letter+' needs a number of electrons after it, like '+n+letter+'2.'); break; }
+    out.items.push({sub:n+letter,n:+digits});
+    i=j;
+  }
+  return out;
+}
+function subHTML(sub){ return sub[0]+'<i>'+sub[1]+'</i>'; }
+function configHTML(core,items){
+  let h=core?'['+core+'] ':'';
+  h+=items.map(it=>subHTML(it.sub)+'<sup>'+it.n+'</sup>').join(' ');
+  return h;
+}
+function previewHTML(raw){
+  if(!raw.trim()) return '';
+  const p=parseConfig(raw);
+  return configHTML(p.core,p.items)+(p.errors.length?' <span class="hintline">…</span>':'');
+}
+function keyConfigHTML(sp){
+  const key=keyFor(sp);
+  let core=null, items=[];
+  const ord=EXT.filter(s=>key[s]);
+  if(usesCore(sp)){ core='Ar'; items=ord.filter(s=>!AR_CORE.includes(s)).map(s=>({sub:s,n:key[s]})); }
+  else items=ord.map(s=>({sub:s,n:key[s]}));
+  if(core && !items.length) return '['+core+']';
+  return configHTML(core,items);
+}
+function nondecreasing(a){ for(let i=1;i<a.length;i++) if(a[i]<a[i-1]) return false; return true; }
+
+function checkConfig(raw,sp){
+  const key=keyFor(sp), label=speciesHTML(sp);
+  if(!String(raw).trim()) return {correct:false,msgs:['Type a configuration first.']};
+  const p=parseConfig(raw);
+  if(p.errors.length) return {correct:false,msgs:p.errors};
+  const msgs=[], seen={};
+  for(const it of p.items){
+    const nn=+it.sub[0], l=LQ[it.sub[1]];
+    if(l>=nn){ const allowed=['s','p','d','f'].slice(0,Math.min(nn,4)).map(x=>nn+x).join(', '); msgs.push('There is no '+it.sub+' subshell. For n = '+nn+' the subshells are '+allowed+'.'); continue; }
+    if(it.n>cap(it.sub)) msgs.push(it.sub+' can hold at most '+cap(it.sub)+' electrons ('+nBoxes(it.sub)+' orbital'+(nBoxes(it.sub)>1?'s':'')+' × 2), but you wrote '+it.n+'. (Pauli principle)');
+    if(seen[it.sub]) msgs.push(it.sub+' appears more than once. List each subshell once.');
+    seen[it.sub]=1;
+    if(p.core && CORES[p.core][it.sub]) msgs.push(it.sub+' is already included in the ['+p.core+'] core.');
+  }
+  if(msgs.length) return {correct:false,msgs};
+  const tot=Object.assign({},p.core?CORES[p.core]:{});
+  for(const it of p.items) if(it.n>0) tot[it.sub]=(tot[it.sub]||0)+it.n;
+  const T=total(tot), E=total(key);
+  if(T!==E) return {correct:false,msgs:['Your configuration has '+T+' electron'+(T===1?'':'s')+', but '+label+' has '+E+'.']};
+  if(!sameConfig(tot,key)){
+    const diffs=[...new Set([...Object.keys(tot),...Object.keys(key)])].filter(s=>(tot[s]||0)!==(key[s]||0));
+    if(sp.q===0 && (sp.Z===24||sp.Z===29) && sameConfig(tot,aufbau(E)))
+      return {correct:false,msgs:[ELEMENTS[sp.Z][0]+' is an exception to the Aufbau order. A '+(sp.Z===24?'half-filled':'completely filled')+' 3d subshell is especially stable, so one 4s electron moves into 3d.']};
+    if(sp.group==='tm' && sp.q>0 && (tot['4s']||0)>(key['4s']||0))
+      return {correct:false,msgs:['Transition-metal cations lose their 4s electrons before any 3d electrons. Write the neutral atom first, then remove electrons from the highest n (4s) first.']};
+    for(let i=0;i<EXT.length;i++){
+      const s=EXT[i];
+      if((tot[s]||0)<cap(s)){
+        const later=EXT.slice(i+1).find(x=>(tot[x]||0)>0);
+        if(later && !(sameConfig(key,tot))) {
+          // only report as an Aufbau problem if the key itself has no gap here
+          const keyLater=EXT.slice(i+1).some(x=>(key[x]||0)>0) && (key[s]||0)<cap(s);
+          if(!keyLater) return {correct:false,msgs:['Aufbau principle: '+s+' isn’t full, but you put electrons in a higher-energy subshell ('+later+'). Fill lower-energy subshells first.']};
+        }
+        break;
+      }
+    }
+    return {correct:false,msgs:['Check the number of electrons in '+diffs.join(', ')+'.']};
+  }
+  const seq=p.items.filter(it=>it.n>0).map(it=>it.sub);
+  const auf=nondecreasing(seq.map(s=>EXT.indexOf(s)));
+  const nl=nondecreasing(seq.map(s=>(+s[0])*10+LQ[s[1]]));
+  if(!auf && !nl) return {correct:false,msgs:['The electron counts are right, but list the subshells in order (1s 2s 2p 3s 3p 4s 3d 4p).']};
+  const notes=[];
+  if(usesCore(sp) && !p.core) notes.push('Correct. For larger atoms you can also write the noble-gas core, e.g. [Ar].');
+  return {correct:true,msgs:[],notes};
+}
+
+function checkCount(val,sp){
+  const E=sp.Z-sp.q, v=Number(String(val).trim());
+  if(String(val).trim()===''||!Number.isFinite(v)) return {correct:false,msgs:['Enter a whole number.']};
+  if(v===E) return {correct:true,msgs:[]};
+  if(sp.q!==0 && v===sp.Z) return {correct:false,msgs:['That’s the atomic number (number of protons). A charge of '+chargeText(sp.q)+' means the ion has '+(sp.q>0?'lost':'gained')+' '+Math.abs(sp.q)+' electron'+(Math.abs(sp.q)>1?'s':'')+'.']};
+  if(sp.q!==0 && v===sp.Z+sp.q) return {correct:false,msgs:['Check the direction. A '+(sp.q>0?'positive':'negative')+' charge means electrons were '+(sp.q>0?'lost':'gained')+', not '+(sp.q>0?'gained':'lost')+'.']};
+  return {correct:false,msgs:['Find the atomic number Z on the periodic table'+(sp.q?', then adjust for the charge':'')+'. A neutral atom has Z electrons.']};
+}
+
+// ---- orbital diagrams ----
+function displaySubs(sp){
+  const key=keyFor(sp), neu=neutralConfig(sp.Z);
+  let last=0;
+  for(const s of SUBS) if(key[s]||neu[s]) last=Math.max(last,SUBS.indexOf(s));
+  let subs=SUBS.slice(0,last+1);
+  if(usesCore(sp)) subs=subs.filter(s=>!AR_CORE.includes(s));
+  return subs;
+}
+function scopeSubs(sp){ return usesCore(sp)?SUBS.filter(s=>!AR_CORE.includes(s)):SUBS.slice(); }
+function emptyBoxes(sub){ return Array.from({length:nBoxes(sub)},()=>[0,0]); }
+function emptyDiagram(subs){ const d={}; subs.forEach(s=>d[s]=emptyBoxes(s)); return d; }
+function fillSub(sub,n){ const b=emptyBoxes(sub); for(let i=0;i<n;i++){ const k=b.length; if(i<k) b[i][0]=1; else b[i-k][1]=-1; } return b; }
+function keyDiagram(sp,subs){ const key=keyFor(sp), d={}; subs.forEach(s=>d[s]=fillSub(s,key[s]||0)); return d; }
+function coreDiagram(){ const d={}; AR_CORE.forEach(s=>d[s]=fillSub(s,cap(s))); return d; }
+function sup(n){ return '<sup>'+n+'</sup>'; }
+
+function checkDiagram(diag,sp){
+  const key=keyFor(sp), scope=scopeSubs(sp);
+  const issues=[], notes=[];
+  const subs=SUBS.filter(s=>diag[s] || (scope.includes(s)&&key[s]));
+  for(const s of subs){
+    const boxes=diag[s]||[];
+    let n=0, pauli=false;
+    boxes.forEach(b=>{ n+=(b[0]?1:0)+(b[1]?1:0); if(b[0]&&b[0]===b[1]) pauli=true; });
+    const exp=key[s]||0;
+    if(pauli) issues.push('Pauli principle: a '+s+' orbital holds two electrons with the same spin. Two electrons in one orbital must have opposite spins (↑↓).');
+    if(!diag[s]) { issues.push('You need '+s+' orbitals: the configuration puts '+exp+' electron'+(exp===1?'':'s')+' there.'); continue; }
+    if(n!==exp && s==='4s' && exp===0 && sp.group==='tm' && sp.q>0) issues.push('4s: transition-metal cations lose their 4s electrons first, so the 4s orbital should be empty.');
+    else if(n!==exp) issues.push(s+': you drew '+n+' electron'+(n===1?'':'s')+', but the configuration has '+subHTML(s)+sup(exp)+'.');
+    if(pauli) continue;
+    const paired=boxes.filter(b=>b[0]&&b[1]).length, empty=boxes.filter(b=>!b[0]&&!b[1]).length;
+    if(paired>0 && empty>0) issues.push('Hund’s rule: in '+s+' you paired electrons while an orbital is still empty. Put one electron in each '+s+' orbital before pairing any.');
+    const singles=boxes.filter(b=>(!!b[0])!==(!!b[1])).map(b=>b[0]||b[1]);
+    if(new Set(singles).size>1) issues.push('Hund’s rule: the unpaired electrons in '+s+' should all have the same spin (parallel).');
+    else if(singles.length && singles[0]===-1) notes.push('The unpaired '+s+' electrons all point down. That’s the same state, but the usual convention is to draw them pointing up.');
+  }
+  return {correct:issues.length===0,issues,notes};
+}
+function diagramUnpaired(diag){ let u=0; for(const s in diag) diag[s].forEach(b=>{ if((!!b[0])!==(!!b[1])) u++; }); return u; }
+
+function checkMagnet(choice,count,sp){
+  const u=unpaired(keyFor(sp)), para=u>0, msgs=[];
+  const c=String(count).trim();
+  if(!choice) msgs.push('Choose diamagnetic or paramagnetic.');
+  if(c===''||!Number.isInteger(Number(c))) msgs.push('Enter the number of unpaired electrons.');
+  if(msgs.length) return {correct:false,msgs,partial:{}};
+  const cOk=Number(c)===u, mOk=(choice==='para')===para;
+  if(!cOk) msgs.push('Count the boxes that hold a single arrow. That’s the number of unpaired electrons.');
+  if(cOk && !mOk) msgs.push(u>0?'With '+u+' unpaired electron'+(u>1?'s':'')+', the species is attracted to a magnetic field, so it is paramagnetic.':'With every electron paired, the species is weakly repelled by a magnetic field, so it is diamagnetic.');
+  if(!cOk && !mOk) msgs.push('Paramagnetic means at least one unpaired electron; diamagnetic means all electrons are paired.');
+  return {correct:cOk&&mOk,msgs,partial:{count:cOk,magnet:mOk}};
+}
+// LOGIC-END
+
+// ================= UI =================
+const $=s=>document.querySelector(s);
+const app=$('#app');
+const st={mode:'coach',filter:'all',sp:null,step:1,tries:{},diag:{},showCore:false,inputs:{},fb:{},test:null};
+try{ const m=localStorage.getItem('ecl-mode'); if(m==='test') st.mode='test'; }catch(e){}
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// arrows drawn as half-headed "harpoons"
+function arrowSVG(x,dir,small){
+  const top=8, bot=38;
+  if(dir===1) return `<path d="M${x} ${bot} L${x} ${top} M${x} ${top} L${x-6} ${top+10}"/>`;
+  return `<path d="M${x} ${top} L${x} ${bot} M${x} ${bot} L${x+6} ${bot-10}"/>`;
+}
+function boxHTML(sub,b,idx){
+  const n=(b[0]?1:0)+(b[1]?1:0);
+  let paths='';
+  if(n===1){ paths=arrowSVG(23,b[0]||b[1]); }
+  else if(n===2){ paths=arrowSVG(16,b[0])+arrowSVG(30,b[1]); }
+  return `<div class="box ${sub[1]} f${n}" data-sub="${sub}" data-i="${idx}"><svg viewBox="0 0 46 46" fill="none" stroke="var(--arrow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${paths}</svg></div>`;
+}
+function diagramHTML(diag,subs,opts={}){
+  let h='';
+  if(opts.core) h+=`<div class="core">[${opts.core}]</div>`;
+  if(opts.coreDiag){ h+=`<div class="readonly" style="display:contents">`+AR_CORE.map(s=>`<div class="subgroup readonly"><div class="boxes">${opts.coreDiag[s].map((b,i)=>boxHTML(s,b,i)).join('')}</div><div class="sublabel">${subHTML(s)}</div></div>`).join('')+`</div>`; }
+  for(const s of subs){
+    if(!diag[s]) continue;
+    h+=`<div class="subgroup"><div class="boxes">${diag[s].map((b,i)=>boxHTML(s,b,i)).join('')}</div><div class="sublabel">${subHTML(s)}</div></div>`;
+  }
+  return `<div class="diagram ${opts.editable?'editable':''} ${opts.small?'small-diagram':''}" ${opts.id?'id="'+opts.id+'"':''}>${h||'<span class="hintline">No orbitals yet.</span>'}</div>`;
+}
+function wireDiagram(el,diag,onChange){
+  el.querySelectorAll('.editable .box, .box').forEach(box=>{
+    if(box.closest('.readonly')) return;
+    box.addEventListener('click',e=>{
+      const r=box.getBoundingClientRect();
+      const s=box.dataset.sub, i=+box.dataset.i;
+      const b=diag[s][i];
+      // Left half = first electron, right half = second. Each click cycles empty → ↑ → ↓ → empty.
+      let half=(e.clientX-r.left)<r.width/2?0:1;
+      if(!b[0]) half=0;
+      b[half]=b[half]===0?1:(b[half]===1?-1:0);
+      if(!b[0] && b[1]){ b[0]=b[1]; b[1]=0; }
+      onChange();
+    });
+  });
+}
+
+// ---------- periodic table ----------
+(function(){
+  const pos=Z=>{ if(Z===1) return [1,1]; if(Z===2) return [1,18];
+    if(Z<=10) return [2, Z<=4?Z-2:Z+8]; if(Z<=18) return [3, Z<=12?Z-10:Z]; return [4,Z-18]; };
+  let h=''; const cells={};
+  for(let Z=1;Z<=36;Z++){ const [r,c]=pos(Z); cells[r+','+c]=Z; }
+  for(let r=1;r<=4;r++) for(let c=1;c<=18;c++){ const Z=cells[r+','+c]; h+= Z?`<div><small>${Z}</small>${ELEMENTS[Z][0]}</div>`:'<div class="blank"></div>'; }
+  $('#ptGrid').innerHTML=h;
+  $('#ptBtn').onclick=()=>$('#ptable').classList.toggle('show');
+  $('#ptClose').onclick=()=>$('#ptable').classList.remove('show');
+})();
+
+// ---------- tabs ----------
+function setMode(m){ st.mode=m; try{localStorage.setItem('ecl-mode',m);}catch(e){} $('#tabCoach').classList.toggle('active',m==='coach'); $('#tabTest').classList.toggle('active',m==='test'); render(); }
+$('#tabCoach').onclick=()=>setMode('coach');
+$('#tabTest').onclick=()=>setMode('test');
+
+function pool(filter){ return SPECIES.filter(s=>filter==='all'||s.group===filter); }
+const FILTERS=[['all','All'],['atom','Neutral atoms'],['main','Main-group ions'],['tm','Transition-metal ions']];
+
+// ================= COACHING =================
+function loadSpecies(sp){
+  st.sp=sp; st.step=1; st.tries={1:0,2:0,3:0,4:0}; st.inputs={count:'',config:'',magnet:'',unp:''}; st.fb={}; st.showCore=false;
+  st.diag=emptyDiagram(displaySubs(sp));
+  render();
+}
+function randomSpecies(){ const p=pool(st.filter).filter(s=>!st.sp||s.id!==st.sp.id); loadSpecies(p[Math.floor(Math.random()*p.length)]); }
+
+function fbHTML(f){
+  if(!f) return '';
+  const notes=(f.notes||[]).map(n=>`<div class="note">${n}</div>`).join('');
+  if(f.reveal) return `<div class="fb reveal">${f.reveal}</div>`;
+  if(f.correct) return `<div class="fb ok">✓ Correct. ${notes}</div>`;
+  const list=f.msgs||f.issues||[];
+  return `<div class="fb bad">${list.length>1?'<ul>'+list.map(m=>'<li>'+m+'</li>').join('')+'</ul>':list[0]||''}${notes}</div>`;
+}
+function stepHTML(n,title,body){
+  const cls=st.step>n?'done':(st.step<n?'locked':'');
+  return `<section class="step ${cls}" id="step${n}"><h2><span class="num">${st.step>n?'✓':n}</span>${title}</h2><div class="body">${body}</div></section>`;
+}
+function showMeBtn(n){ return st.tries[n]>=3 && st.step===n ? `<button class="btn" data-show="${n}">Show me</button>`:''; }
+
+function renderCoach(){
+  if(!st.sp){ loadSpecies(pool('all').find(s=>s.sym==='O')); return; }
+  const sp=st.sp;
+  const opts=FILTERS.map(([k,l])=>`<button class="chip ${st.filter===k?'active':''}" data-filter="${k}">${l} (${pool(k).length})</button>`).join('');
+  const sel=`<select id="pick">${FILTERS.slice(1).map(([k,l])=>`<optgroup label="${l}">${pool(k).map(s=>`<option value="${s.id}" ${s.id===sp.id?'selected':''}>${s.sym}${s.q?' '+chargeText(s.q):''}</option>`).join('')}</optgroup>`).join('')}</select>`;
+  const subs=displaySubs(sp);
+  const coreOpt=usesCore(sp)?`<label class="hintline" style="margin-left:6px"><input type="checkbox" id="showCore" ${st.showCore?'checked':''}> show the [Ar] core orbitals</label>`:'';
+  app.innerHTML=`
+    <div class="bar">${opts}</div>
+    <div class="bar">${sel}<button class="btn" id="rand">Random species</button></div>
+    <div class="species"><span class="sym">${speciesHTML(sp)}</span><span class="desc">${speciesDesc(sp)}</span></div>
+    ${stepHTML(1,'How many electrons?',`
+      <div class="row"><input type="number" id="count" min="0" style="width:110px" value="${esc(st.inputs.count)}" ${st.step>1?'disabled':''}>
+      <button class="btn primary" id="chk1" ${st.step!==1?'disabled':''}>Check</button>${showMeBtn(1)}</div>${fbHTML(st.fb[1])}`)}
+    ${stepHTML(2,'Write the electron configuration',`
+      <div class="row"><input type="text" id="cfg" style="flex:1 1 280px" placeholder="e.g. 1s2 2s2 2p4   or   [He] 2s2 2p4" value="${esc(st.inputs.config)}" ${st.step>2?'disabled':''} autocomplete="off" spellcheck="false">
+      <button class="btn primary" id="chk2" ${st.step!==2?'disabled':''}>Check</button>${showMeBtn(2)}</div>
+      <div class="preview" id="cfgPrev">${previewHTML(st.inputs.config)}</div>
+      <div class="hintline">Type numbers normally; they display as superscripts. A noble-gas core like [Ne] or [Ar] is fine.</div>${fbHTML(st.fb[2])}`)}
+    ${stepHTML(3,'Fill in the orbital diagram',`
+      <div class="hintline">Click a box to add an electron (↑). Click the right half of a box to add a second electron. Click an arrow again to flip it; a third click removes it. Use the Aufbau principle, Hund’s rule and the Pauli principle.</div>
+      ${coreOpt}
+      ${diagramHTML(st.diag,subs,{editable:st.step===3,id:'dg',core:usesCore(sp)&&!st.showCore?'Ar':null,coreDiag:usesCore(sp)&&st.showCore?coreDiagram():null})}
+      <div class="row"><button class="btn primary" id="chk3" ${st.step!==3?'disabled':''}>Check</button><button class="btn" id="clr3" ${st.step!==3?'disabled':''}>Clear</button>${showMeBtn(3)}</div>${fbHTML(st.fb[3])}`)}
+    ${stepHTML(4,'Diamagnetic or paramagnetic?',`
+      <div class="row"><label class="radio"><input type="radio" name="mag" value="dia" ${st.inputs.magnet==='dia'?'checked':''} ${st.step>4?'disabled':''}> Diamagnetic</label>
+      <label class="radio"><input type="radio" name="mag" value="para" ${st.inputs.magnet==='para'?'checked':''} ${st.step>4?'disabled':''}> Paramagnetic</label></div>
+      <div class="row" style="margin-top:8px">Number of unpaired electrons: <input type="number" id="unp" min="0" style="width:90px" value="${esc(st.inputs.unp)}" ${st.step>4?'disabled':''}>
+      <button class="btn primary" id="chk4" ${st.step!==4?'disabled':''}>Check</button>${showMeBtn(4)}</div>${fbHTML(st.fb[4])}`)}
+    ${st.step>4?`<div class="card" style="background:var(--okbg)"><b>All four steps done for ${speciesHTML(sp)}.</b> <button class="btn primary" id="next" style="margin-left:10px">Next species</button></div>`:''}
+  `;
+  app.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{ st.filter=b.dataset.filter; const p=pool(st.filter); if(!p.some(s=>s.id===sp.id)) randomSpecies(); else render(); });
+  $('#pick').onchange=e=>loadSpecies(SPECIES.find(s=>s.id===e.target.value));
+  $('#rand').onclick=randomSpecies;
+  const nx=$('#next'); if(nx) nx.onclick=randomSpecies;
+  $('#count').oninput=e=>st.inputs.count=e.target.value;
+  $('#cfg').oninput=e=>{ st.inputs.config=e.target.value; $('#cfgPrev').innerHTML=previewHTML(e.target.value); };
+  $('#unp').oninput=e=>st.inputs.unp=e.target.value;
+  app.querySelectorAll('input[name=mag]').forEach(r=>r.onchange=()=>st.inputs.magnet=r.value);
+  const sc=$('#showCore'); if(sc) sc.onchange=()=>{ st.showCore=sc.checked; render(); };
+  if(st.step===3) wireDiagram($('#dg'),st.diag,()=>{ st.fb[3]=null; render(); });
+  const enter=(id,fn)=>{ const el=$(id); if(el) el.onkeydown=e=>{ if(e.key==='Enter') fn(); }; };
+  const grade=(n,res)=>{ st.fb[n]=res; if(res.correct) st.step=n+1; else st.tries[n]++; render(); };
+  const c1=()=>grade(1,checkCount(st.inputs.count,sp));
+  const c2=()=>grade(2,checkConfig(st.inputs.config,sp));
+  const c3=()=>grade(3,checkDiagram(st.diag,sp));
+  const c4=()=>grade(4,checkMagnet(st.inputs.magnet,st.inputs.unp,sp));
+  $('#chk1').onclick=c1; enter('#count',c1);
+  $('#chk2').onclick=c2; enter('#cfg',c2);
+  $('#chk3').onclick=c3;
+  $('#clr3').onclick=()=>{ st.diag=emptyDiagram(subs); st.fb[3]=null; render(); };
+  $('#chk4').onclick=c4; enter('#unp',c4);
+  app.querySelectorAll('[data-show]').forEach(b=>b.onclick=()=>{
+    const n=+b.dataset.show, key=keyFor(sp), u=unpaired(key);
+    if(n===1){ st.inputs.count=String(sp.Z-sp.q); st.fb[1]={reveal:`${speciesHTML(sp)} has ${sp.Z-sp.q} electrons: Z = ${sp.Z}${sp.q?(sp.q>0?', minus ':', plus ')+Math.abs(sp.q)+' for the '+chargeText(sp.q)+' charge':''}.`}; }
+    if(n===2){ st.fb[2]={reveal:`The configuration is <span class="cfg">${keyConfigHTML(sp)}</span>. It has been filled in for you.`}; st.inputs.config=keyConfigHTML(sp).replace(/<sup>(\d+)<\/sup>/g,'$1').replace(/<\/?i>/g,''); }
+    if(n===3){ st.diag=keyDiagram(sp,subs); st.fb[3]={reveal:'Here is the correct diagram. Notice how each subshell is filled: one electron per orbital first, all with the same spin, then pairing with opposite spins.'}; }
+    if(n===4){ st.inputs.magnet=u>0?'para':'dia'; st.inputs.unp=String(u); st.fb[4]={reveal:`${u} unpaired electron${u===1?'':'s'}, so ${speciesHTML(sp)} is ${u>0?'paramagnetic':'diamagnetic'}.`}; }
+    st.step=n+1; render();
+  });
+}
+
+// ================= TESTING =================
+function newTestSetup(){ st.test={phase:'setup',name:'',count:10,groups:{atom:true,main:true,tm:true}}; }
+function startTest(){
+  const t=st.test;
+  const p=SPECIES.filter(s=>t.groups[s.group]);
+  if(!p.length) return;
+  const bag=p.slice(); for(let i=bag.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; }
+  t.items=[]; while(t.items.length<t.count) t.items.push(bag[t.items.length%bag.length]);
+  t.i=0; t.results=[]; t.phase='q'; resetQ();
+  render();
+}
+function resetQ(){ const t=st.test; t.inp={count:'',config:'',magnet:'',unp:'',coreOnly:false}; t.diag={}; }
+function renderTest(){
+  if(!st.test) newTestSetup();
+  const t=st.test;
+  if(t.phase==='setup'){
+    app.innerHTML=`<div class="card"><h2 style="margin-top:0">Start a test</h2>
+      <p class="hintline">No feedback until the end. Then you get a score and a summary you can print or save as a PDF for Blackboard.</p>
+      <div class="row" style="margin:8px 0">Your name: <input type="text" id="tname" value="${esc(t.name)}" style="width:260px"></div>
+      <div class="row" style="margin:8px 0">Number of species: <select id="tcount">${[5,10,15,20].map(n=>`<option ${n===t.count?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div class="row" style="margin:8px 0">Include: ${FILTERS.slice(1).map(([k,l])=>`<label class="radio"><input type="checkbox" data-g="${k}" ${t.groups[k]?'checked':''}> ${l}</label>`).join('')}</div>
+      <button class="btn primary" id="tstart">Start test</button></div>`;
+    $('#tname').oninput=e=>t.name=e.target.value;
+    $('#tcount').onchange=e=>t.count=+e.target.value;
+    app.querySelectorAll('[data-g]').forEach(c=>c.onchange=()=>t.groups[c.dataset.g]=c.checked);
+    $('#tstart').onclick=startTest;
+    return;
+  }
+  if(t.phase==='q'){
+    const sp=t.items[t.i];
+    const scope=scopeSubs(sp);
+    const shown=SUBS.filter(s=>t.diag[s]);
+    app.innerHTML=`
+      <div class="bar"><b>Question ${t.i+1} of ${t.items.length}</b></div>
+      <div class="species"><span class="sym">${speciesHTML(sp)}</span><span class="desc">${speciesDesc(sp)}</span></div>
+      <section class="step"><h2><span class="num">1</span>How many electrons?</h2><input type="number" id="count" style="width:110px" value="${esc(t.inp.count)}"></section>
+      <section class="step"><h2><span class="num">2</span>Electron configuration</h2>
+        <input type="text" id="cfg" style="width:100%;max-width:520px" placeholder="e.g. 1s2 2s2 2p4   or   [He] 2s2 2p4" value="${esc(t.inp.config)}" autocomplete="off" spellcheck="false">
+        <div class="preview" id="cfgPrev">${previewHTML(t.inp.config)}</div></section>
+      <section class="step"><h2><span class="num">3</span>Orbital diagram</h2>
+        <div class="hintline">First choose the subshells you need${usesCore(sp)?' beyond the [Ar] core':''}, then fill the boxes. Click a box to add an electron; click the right half for a second; click again to flip or remove.</div>
+        <div class="palette">${scope.map(s=>`<button class="btn ${t.diag[s]?'on':''}" data-sub="${s}">${subHTML(s)}</button>`).join('')}</div>
+        ${diagramHTML(t.diag,shown,{editable:true,id:'dg',core:usesCore(sp)?'Ar':null})}
+        ${usesCore(sp)?`<label class="hintline"><input type="checkbox" id="coreOnly" ${t.inp.coreOnly?'checked':''}> This species has no electrons outside the [Ar] core.</label>`:''}
+      </section>
+      <section class="step"><h2><span class="num">4</span>Magnetism</h2>
+        <label class="radio"><input type="radio" name="mag" value="dia" ${t.inp.magnet==='dia'?'checked':''}> Diamagnetic</label>
+        <label class="radio"><input type="radio" name="mag" value="para" ${t.inp.magnet==='para'?'checked':''}> Paramagnetic</label>
+        <div class="row" style="margin-top:8px">Number of unpaired electrons: <input type="number" id="unp" style="width:90px" value="${esc(t.inp.unp)}"></div></section>
+      <div class="row"><button class="btn primary" id="tnext">${t.i+1<t.items.length?'Save and go to next':'Save and finish'}</button><button class="btn" id="tquit">Quit test</button></div>`;
+    $('#count').oninput=e=>t.inp.count=e.target.value;
+    $('#cfg').oninput=e=>{ t.inp.config=e.target.value; $('#cfgPrev').innerHTML=previewHTML(e.target.value); };
+    $('#unp').oninput=e=>t.inp.unp=e.target.value;
+    app.querySelectorAll('input[name=mag]').forEach(r=>r.onchange=()=>t.inp.magnet=r.value);
+    app.querySelectorAll('.palette [data-sub]').forEach(b=>b.onclick=()=>{ const s=b.dataset.sub; if(t.diag[s]) delete t.diag[s]; else t.diag[s]=emptyBoxes(s); render(); });
+    wireDiagram($('#dg'),t.diag,render);
+    const co=$('#coreOnly'); if(co) co.onchange=()=>t.inp.coreOnly=co.checked;
+    $('#tquit').onclick=()=>{ newTestSetup(); render(); };
+    $('#tnext').onclick=()=>{
+      const r={sp,inp:Object.assign({},t.inp),diag:JSON.parse(JSON.stringify(t.diag))};
+      r.count=checkCount(t.inp.count,sp).correct;
+      r.config=checkConfig(t.inp.config,sp).correct;
+      r.diagram=checkDiagram(t.diag,sp).correct;
+      if(usesCore(sp)){ const keyValence=scopeSubs(sp).some(x=>keyFor(sp)[x]); if(!!t.inp.coreOnly===keyValence) r.diagram=false; }
+      r.magnet=checkMagnet(t.inp.magnet,t.inp.unp,sp).correct;
+      t.results.push(r); t.i++;
+      if(t.i>=t.items.length) t.phase='done'; else resetQ();
+      render(); window.scrollTo(0,0);
+    };
+    return;
+  }
+  // summary
+  const parts=['count','config','diagram','magnet'];
+  const got=t.results.reduce((a,r)=>a+parts.filter(p=>r[p]).length,0), max=t.results.length*4;
+  const mark=b=>b?'<span class="mark-ok">✓</span>':'<span class="mark-bad">✗</span>';
+  const rows=t.results.map((r,i)=>{
+    const sp=r.sp, key=keyFor(sp), u=unpaired(key);
+    const p=parseConfig(r.inp.config);
+    const studentCfg=r.inp.config.trim()?(p.errors.length?esc(r.inp.config):configHTML(p.core,p.items)):'<i>blank</i>';
+    const sd=SUBS.filter(s=>r.diag[s]);
+    return `<tr><td>${i+1}</td><td style="font-size:1.2rem;font-family:Georgia,serif">${speciesHTML(sp)}</td>
+      <td>${mark(r.count)} ${esc(r.inp.count||'—')}<br><span class="hintline">key: ${sp.Z-sp.q}</span></td>
+      <td>${mark(r.config)} <span class="cfg">${studentCfg}</span><br><span class="hintline">key: <span class="cfg">${keyConfigHTML(sp)}</span></span></td>
+      <td>${mark(r.diagram)}${diagramHTML(r.diag,sd,{small:true,core:usesCore(sp)?'Ar':null})}${r.inp.coreOnly?'<span class="hintline">(ticked: no electrons outside the core)</span>':''}${r.diagram?'':'<span class="hintline">key:</span>'+diagramHTML(keyDiagram(sp,displaySubs(sp)),displaySubs(sp),{small:true,core:usesCore(sp)?'Ar':null})}</td>
+      <td>${mark(r.magnet)} ${r.inp.magnet?(r.inp.magnet==='para'?'para':'dia'):'—'}, ${esc(r.inp.unp||'—')} unpaired<br><span class="hintline">key: ${u>0?'para':'dia'}, ${u}</span></td></tr>`;
+  }).join('');
+  app.innerHTML=`<div class="card">
+    <h2 style="margin-top:0">Electron Configuration Lab: test results</h2>
+    <div class="nameline">Name: ${t.name?'<b>'+esc(t.name)+'</b>':'______________________________'} &nbsp;&nbsp; Date: ${new Date().toLocaleDateString()}</div>
+    <p style="font-size:1.15rem">Score: <b>${got} / ${max}</b> (${Math.round(100*got/max)}%) &nbsp; <span class="hintline">One point each for electron count, configuration, orbital diagram and magnetism.</span></p>
+    <div class="row no-print" style="margin-bottom:12px"><button class="btn primary" id="tprint">Print / save as PDF</button><button class="btn" id="tagain">New test</button></div>
+    <table class="sum"><tr><th>#</th><th>Species</th><th>Electrons</th><th>Configuration</th><th>Orbital diagram</th><th>Magnetism</th></tr>${rows}</table></div>`;
+  $('#tprint').onclick=()=>window.print();
+  $('#tagain').onclick=()=>{ const n=t.name; newTestSetup(); st.test.name=n; render(); };
+}
+
+function render(){ $('#tabCoach').classList.toggle('active',st.mode==='coach'); $('#tabTest').classList.toggle('active',st.mode==='test'); if(st.mode==='coach') renderCoach(); else renderTest(); }
+render();
+</script>
+</body>
+</html>
